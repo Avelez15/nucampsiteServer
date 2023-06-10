@@ -24,4 +24,5 @@ const partnerSchema = new Schema({
 });
 
 const Partner = mongoose.model('Partner', partnerSchema);
-modules.export = Partner;
+
+module.exports = Partner;
