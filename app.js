@@ -3,6 +3,8 @@ var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
+const session = require('express-session');
+const fileStore = require('session-file-store')(session);
 
 
 var indexRouter = require('./routes/index');
@@ -34,11 +36,21 @@ app.set('view engine', 'jade');
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-app.use(cookieParser('12345-67890-09870-54321'));
+//app.use(cookieParser('12345-67890-09870-54321'));
+
+app.use(session({
+  name: 'session-id',
+  secret: '12345-67890-09870-54321',
+  //when new session is created, but no new updates are made to it, then at the end of the request it won't get saved since it will just be an empty session.
+  saveUninitialized: false,
+  resave: false,
+  store: new fileStore()
+}));
 
 function auth(req, res, next) {
+  console.log(req.session);
   //signedCookies is provided by cookieParser and will automatically parse a signed cookie from the request, if cookie not properly signed, returns a property of false.
-  if (!req.signedCookies.user) {
+  if (!req.session.user) {
     const authHeader = req.headers.authorization;
     if (!authHeader) {
       const err = new Error('You are not authenticated!');
@@ -52,7 +64,7 @@ function auth(req, res, next) {
     const pass = auth[1];
     if (user === 'admin' && pass === 'password') {
       //res.cookie is part of expresses response API, this uses it to create a new cookie 
-      res.cookie('user', 'admin', { signed: true });
+      req.session.user = 'admin';
       return next();//authorized
     } else {
       const err = new Error('You are not authorized!');
@@ -62,7 +74,7 @@ function auth(req, res, next) {
     }
     //below will mean if there is a signedCookies.user value.
   } else {
-    if (req.signedCookies.user === 'admin') {
+    if (req.session.user === 'admin') {
       return next();
     } else {
       const err = new Error('You are not authorized!');
