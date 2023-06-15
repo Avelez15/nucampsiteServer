@@ -1,13 +1,9 @@
 var createError = require('http-errors');
 var express = require('express');
 var path = require('path');
-var cookieParser = require('cookie-parser');
 var logger = require('morgan');
-const session = require('express-session');
-const fileStore = require('session-file-store')(session);
 const passport = require('passport');
-const authenticate = require('./authenticate');
-
+const config = require('./config');
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
@@ -16,8 +12,9 @@ const promotionRouter = require('./routes/promotionRouter');
 const partnerRouter = require('./routes/partnerRouter');
 
 const mongoose = require('mongoose');
+const { start } = require('repl');
 
-const url = 'mongodb://localhost:27017/nucampsite';
+const url = config.mongoUrl;
 const connect = mongoose.connect(url, {
   useCreateIndex: true,
   useFindAndModify: false,
@@ -40,35 +37,11 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 //app.use(cookieParser('12345-67890-09870-54321'));
 
-app.use(session({
-  name: 'session-id',
-  secret: '12345-67890-09870-54321',
-  //when new session is created, but no new updates are made to it, then at the end of the request it won't get saved since it will just be an empty session.
-  saveUninitialized: false,
-  resave: false,
-  store: new fileStore()
-}));
-//these are only necessary if you are using session based authentication, these check incoming requests to see if there is an existing session for that client.If so, the session data is loaded into that client as req.user
+
 app.use(passport.initialize());
-app.use(passport.session());
 
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
-
-function auth(req, res, next) {
-  console.log(req.user);
-  //signedCookies is provided by cookieParser and will automatically parse a signed cookie from the request, if cookie not properly signed, returns a property of false.
-  if (!req.user) {
-    const err = new Error('You are not authenticated!');
-    err.status = 401;
-    return next(err);
-    //below will mean if there is a signedCookies.user value.
-  } else {
-    return next();
-  }
-};
-
-app.use(auth);
 
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -94,3 +67,7 @@ app.use(function (err, req, res, next) {
 });
 
 module.exports = app;
+
+//                                        Notes
+  //when new session is created, but no new updates are made to it, then at the end of the request it won't get saved since it will just be an empty session.
+  //signedCookies is provided by cookieParser and will automatically parse a signed cookie from the request, if cookie not properly signed, returns a property of false.
